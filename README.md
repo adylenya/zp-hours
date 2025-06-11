@@ -55,3 +55,10 @@ To install this Chrome Extension, you will need to load it as an "unpacked" exte
 ## Important Notes
 
 * **API Base URL:** Right now it points to demo ZP, when promoting to production its crucial to change the API Base URL to production website!
+
+## Future Features
+
+1. **Display Daily project reports**
+    * Add display daily project reports to track already submitted hours
+2. **Display All Today's Hours**
+    * Add display of the total today's hours.
