@@ -26,7 +26,7 @@ To install this Chrome Extension, you will need to load it as an "unpacked" exte
 
     * Open your Google Chrome browser.
 
-    * Type `chrome://extensions` into the address bar and press Enter. Alternatively, click the three-dot menu ($\dots$) in the top-right corner, then navigate to `More tools` > `Extensions`.
+    * Type `chrome://extensions` into the address bar and press Enter. Alternatively, click the puzzle icon menu in the top-right corner, then navigate to `Manage Extensions`.
 
 3.  **Enable Developer Mode:**
 
@@ -36,7 +36,7 @@ To install this Chrome Extension, you will need to load it as an "unpacked" exte
 
 4.  **Load Unpacked Extension:**
 
-    * After enabling Developer mode, click the "Load unpacked" button that appears on the left side of the page.
+    * After enabling Developer mode, click the "Load unpacked" button that appears on the top-left side of the page.
 
     * A file dialog will open. Navigate to the directory where you unzipped the extension files (from Step 1).
 
