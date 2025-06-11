@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Zimalab Projects Hours",
+  "version": "1.0",
+  "description": "Log hours to Zimalab projects directly from your browser.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+  // "background": {
+  //   "service_worker": "background.js" // If you need a background script later
+  // }
+}

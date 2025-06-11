@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zimalab Projects</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div class="container">
+    <div id="loadingIndicator" style="display:none;">Loading...</div>
+
+    <div id="loginSection">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <div>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Login</button>
+            <p id="loginError" class="error-message"></p>
+        </form>
+    </div>
+
+    <div id="mainSection">
+        <div class="header-controls">
+            <p>Welcome, <span id="loggedInUser">User</span>!</p>
+            <button id="logoutButton">Logout</button>
+        </div>
+
+        <h2>Add Hours</h2>
+        <form id="addHoursForm">
+            <div>
+                <label for="projectSelect">Select Project:</label>
+                <select id="projectSelect" name="project" required>
+                </select>
+            </div>
+
+            <div id="taskSelection" style="display:none;">
+                <label for="taskSearch">Select or Create Task:</label>
+                <input type="text" id="taskSearch" placeholder="Search for a task..." autocomplete="off">
+                <div id="taskListContainer">
+                    <div id="taskList"></div>
+                </div>
+                <p id="taskLoadingIndicator" style="display:none; font-size: 0.8em; color: #777;">Loading tasks...</p>
+            </div>
+
+            <div class="time-inputs">
+                <label for="hoursSelect">Time Spent:</label>
+                <select id="hoursSelect" name="hours" required>
+                </select>
+                <select id="minutesSelect" name="minutes" required>
+                </select>
+            </div>
+            <div>
+                <label for="comment">Comment (Optional):</label>
+                <textarea id="comment" name="comment" rows="3"></textarea>
+            </div>
+            <button type="submit" id="addHoursButton">Add Hours</button>
+            <p id="hoursMessage"></p>
+        </form>
+    </div>
+</div>
+<script src="jquery-3.7.1.min.js"></script> <script src="popup.js"></script>
+</body>
+</html>
