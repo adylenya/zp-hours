@@ -26,6 +26,7 @@ $(document).ready(function() {
     const $addHoursButton = $('#addHoursButton');
     const $loadingIndicator = $('#loadingIndicator');
     const $loggedInUserSpan = $('#loggedInUser');
+    const $totalHoursTodayDiv = $('#totalHoursToday');
 
     let currentJwtToken = null;
     let currentUserName = null;
@@ -124,8 +125,12 @@ $(document).ready(function() {
         const projectsUrl = `${PROJECTS_ENDPOINT}?username=${currentUserName}`;
 
         apiRequest('GET', projectsUrl)
-            .done(function (projects) {
+            .done(function (response) {
                 $projectSelect.empty().prop('disabled', false);
+                const projects = response.projects;
+                const totalHoursToday = response.totalHoursToday;
+                $loggedInUserSpan.text(response.userFullName);
+
                 if (projects && projects.length > 0) {
                     $projectSelect.append('<option value="" selected disabled>Select a project</option>');
                     projects.forEach(function (project) {
@@ -134,6 +139,7 @@ $(document).ready(function() {
                 } else {
                     $projectSelect.append('<option value="">No projects found</option>');
                 }
+                displayTotalHoursToday(totalHoursToday);
             })
             .fail(function (jqXHR) {
                 const errorMsg = `Error: ${jqXHR.status}. Failed to load projects.`;
@@ -145,6 +151,12 @@ $(document).ready(function() {
             .always(function () {
                 showLoading(false);
             });
+    }
+
+    function displayTotalHoursToday(hours) {
+        const h = Math.floor(hours / 60);
+        const m = hours % 60;
+        $totalHoursTodayDiv.text(`Hours today: ${h}:${m < 10 ? '0' : ''}${m}`);
     }
 
     function fetchTasks(projectId) {
@@ -235,7 +247,7 @@ $(document).ready(function() {
 
     function populateTimeSelectors() {
         $hoursSelect.empty().append('<option value="" selected disabled>Hours</option>');
-        for (let i = 1; i <= 23; i++) {
+        for (let i = 0; i <= 23; i++) {
             $hoursSelect.append(`<option value="${i}">${i}h</option>`);
         }
 
@@ -309,6 +321,7 @@ $(document).ready(function() {
             .always(function () {
                 showLoading(false);
                 $addHoursButton.prop('disabled', false);
+                fetchProjects();
             });
     });
 
