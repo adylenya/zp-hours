@@ -61,6 +61,6 @@ To install this Chrome Extension, you will need to load it as an "unpacked" exte
 1. **Display Daily project reports**
     * Add display daily project reports to track already submitted hours
 2. **Display All Today's Hours**
-    ~~* Add display of the total today's hours.~~ Released in v1.1
+    * ~~ Add display of the total today's hours.~~ Released in v1.1
 3. **User's Full Name**
-    ~~* Add User's Full Name instead of Email.~~ Released in v1.1
+    * ~~* Add User's Full Name instead of Email.~~ Released in v1.1
