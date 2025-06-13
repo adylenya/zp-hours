@@ -1,4 +1,4 @@
-# Zimalab Project Hours Chrome Extension v1
+# Zimalab Project Hours Chrome Extension v1.1
 
 This document provides a guide on how to install the Zimalab Project Hours Chrome Extension. This extension allows you to quickly log hours against your projects and tasks directly from your Chrome browser.
 
@@ -61,4 +61,6 @@ To install this Chrome Extension, you will need to load it as an "unpacked" exte
 1. **Display Daily project reports**
     * Add display daily project reports to track already submitted hours
 2. **Display All Today's Hours**
-    * Add display of the total today's hours.
+    ~~* Add display of the total today's hours.~~ Released in v1.1
+3. **User's Full Name**
+    ~~* Add User's Full Name instead of Email.~~ Released in v1.1

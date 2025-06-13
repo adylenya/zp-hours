@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zimalab Projects Hours",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Log hours to Zimalab projects directly from your browser.",
   "permissions": [
     "storage",
