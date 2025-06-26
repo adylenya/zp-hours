@@ -1,9 +1,10 @@
 $(document).ready(function() {
-    const API_BASE_URL = 'https://demo-zp.zimalab.com';
+    const API_BASE_URL = 'http://127.0.0.1:8000';
     const LOGIN_ENDPOINT = `${API_BASE_URL}/api/login_check`;
     const PROJECTS_ENDPOINT = `${API_BASE_URL}/api/projects`;
     const TASKS_ENDPOINT = `${API_BASE_URL}/api/tasks`;
     const ADD_HOURS_ENDPOINT = `${API_BASE_URL}/api/projects/hours`;
+    const RECENT_ITEMS_ENDPOINT = `${API_BASE_URL}/api/recent-items`;
 
     const $loginSection = $('#loginSection');
     const $mainSection = $('#mainSection');
@@ -13,8 +14,10 @@ $(document).ready(function() {
     const $loginError = $('#loginError');
     const $logoutButton = $('#logoutButton');
     const $projectSelect = $('#projectSelect');
+    const $projectSuggestions = $('#projectSuggestions');
     const $taskSelection = $('#taskSelection');
     const $taskSearch = $('#taskSearch');
+    const $taskSuggestions = $('#taskSuggestions');
     const $taskListContainer = $('#taskListContainer');
     const $taskList = $('#taskList');
     const $taskLoadingIndicator = $('#taskLoadingIndicator');
@@ -27,6 +30,19 @@ $(document).ready(function() {
     const $loadingIndicator = $('#loadingIndicator');
     const $loggedInUserSpan = $('#loggedInUser');
     const $totalHoursTodayDiv = $('#totalHoursToday');
+
+    const currentDate = new Date();
+    const day = currentDate.getDate();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const totalHoursLink = API_BASE_URL + '/report-projects/' + year + '/' + month + '/' + day;
+
+    $totalHoursTodayDiv.attr('href', totalHoursLink);
+
+    $totalHoursTodayDiv.on('click', function(e) {
+        e.preventDefault();
+        chrome.tabs.create({ url: totalHoursLink }, function(tab) {});
+    });
 
     let currentJwtToken = null;
     let currentUserName = null;
@@ -75,6 +91,7 @@ $(document).ready(function() {
         $hoursMessage.text('');
         $loggedInUserSpan.text(currentUserName);
         fetchProjects();
+        fetchRecentProjects();
         populateTimeSelectors();
     }
 
@@ -170,80 +187,111 @@ $(document).ready(function() {
         const tasksUrl = `${TASKS_ENDPOINT}?username=${currentUserName}&projectId=${projectId}`;
 
         apiRequest('GET', tasksUrl)
-            .done(function (tasks) {
-                availableTasks = tasks || [];
-            })
-            .fail(function (jqXHR) {
-                const errorMsg = `Error fetching tasks: ${jqXHR.status}.`;
-                showMessage($hoursMessage, errorMsg, false);
-            })
+            .done(function (tasks) { availableTasks = tasks || []; })
+            .fail(function (jqXHR) { showMessage($hoursMessage, `Error fetching tasks: ${jqXHR.status}.`, false); })
             .always(function () {
                 $taskLoadingIndicator.hide();
                 $taskSearch.prop('disabled', false);
             });
     }
 
-    function renderTaskList() {
-        const searchTerm = $taskSearch.val().toLowerCase();
-        $taskList.empty();
+    function fetchRecentProjects() {
+        if (!currentJwtToken) return;
+        const suggestionsUrl = `${RECENT_ITEMS_ENDPOINT}?username=${currentUserName}`; // No projectId
+        apiRequest('GET', suggestionsUrl)
+            .done(function (response) {
+                renderProjectSuggestions(response.recentProjects);
+            })
+            .fail(function() { console.error("Failed to load recent projects."); });
+    }
 
-        const filteredTasks = availableTasks.filter(task =>
-            task.name.toLowerCase().includes(searchTerm)
-        );
+    function fetchRecentTasks(projectId) {
+        if (!currentJwtToken || !projectId) return;
+        $taskSuggestions.empty(); // Clear previous suggestions
+        const suggestionsUrl = `${RECENT_ITEMS_ENDPOINT}?username=${currentUserName}&projectId=${projectId}`;
+        apiRequest('GET', suggestionsUrl)
+            .done(function (response) {
+                renderTaskSuggestions(response.recentTasks);
+            })
+            .fail(function() { console.error("Failed to load recent tasks for project " + projectId); });
+    }
 
-        if (filteredTasks.length > 0) {
-            filteredTasks.forEach(task => {
-                const $item = $(`<div class="task-item" data-id="${task.id}">${task.name}</div>`);
-                $taskList.append($item);
+    function renderProjectSuggestions(projects) {
+        $projectSuggestions.empty();
+        if (projects && projects.length > 0) {
+            projects.forEach(function(project) {
+                const $pill = $(`<div class="suggestion-pill" data-id="${project.id}"></div>`).text(project.name);
+                $projectSuggestions.append($pill);
             });
         }
-
-        if (searchTerm) {
-            const $createItem = $(`<div class="task-item create-new" data-id="new_task">Create new task: "${searchTerm}"</div>`);
-            $taskList.append($createItem);
-        }
-
-        $taskListContainer.show();
     }
+
+    function renderTaskSuggestions(tasks) {
+        $taskSuggestions.empty();
+        if (tasks && tasks.length > 0) {
+            tasks.forEach(function(task) {
+                const $pill = $(`<div class="suggestion-pill" data-name="${task.name}"></div>`).text(task.name);
+                $taskSuggestions.append($pill);
+            });
+        }
+    }
+
+    $projectSuggestions.on('click', '.suggestion-pill', function() {
+        const projectId = $(this).data('id');
+        $projectSelect.val(projectId).trigger('change');
+    });
+
+    $taskSuggestions.on('click', '.suggestion-pill', function() {
+        const taskName = $(this).data('name');
+        $taskSearch.val(taskName);
+        selectedTask = { id: null, name: taskName };
+        $taskSearch.trigger('focus');
+    });
 
     $projectSelect.on('change', function () {
         const projectId = $(this).val();
+        $taskSuggestions.empty();
         if (projectId) {
             $taskSelection.show();
             fetchTasks(projectId);
+            fetchRecentTasks(projectId);
         } else {
             $taskSelection.hide();
         }
     });
 
-    $taskSearch.on('focus', function() {
-        renderTaskList();
-    });
+    function renderTaskList() {
+        const searchTerm = $taskSearch.val().toLowerCase();
+        $taskList.empty();
 
-    $taskSearch.on('input', function() {
-        selectedTask = null;
-        renderTaskList();
-    });
+        const filteredTasks = availableTasks.filter(task =>
+            (task.id + task.name.toLowerCase()).includes(searchTerm)
+        );
 
-    $taskSearch.on('blur', function() {
-        setTimeout(() => {
-            $taskListContainer.hide();
-        }, 200);
-    });
+        if (filteredTasks.length > 0) {
+            filteredTasks.forEach(task => {
+                const $item = $(`<div class="task-item" data-id="${task.id}">${task.id} - ${task.name}</div>`);
+                $taskList.append($item);
+            });
+        }
 
+        if (searchTerm) {
+            $taskList.append($(`<div class="task-item create-new" data-id="new_task">Create new task: "${searchTerm}"</div>`));
+        }
+
+        $taskListContainer.show();
+    }
+
+    $taskSearch.on('focus', renderTaskList);
+    $taskSearch.on('input', function() { selectedTask = null; renderTaskList(); });
+    $taskSearch.on('blur', function() { setTimeout(() => $taskListContainer.hide(), 200); });
     $taskList.on('mousedown', '.task-item', function() {
         const id = $(this).data('id');
         const name = id === 'new_task' ? $taskSearch.val() : $(this).text();
-
-        selectedTask = {
-            id: id === 'new_task' ? null : id,
-            name: name
-        };
-
+        selectedTask = { id: id === 'new_task' ? null : id, name: name };
         $taskSearch.val(name);
         $taskListContainer.hide();
     });
-
 
     function populateTimeSelectors() {
         $hoursSelect.empty().append('<option value="" selected disabled>Hours</option>');
@@ -267,18 +315,9 @@ $(document).ready(function() {
         const comment = $commentInput.val();
         const taskNameFromInput = $taskSearch.val().trim();
 
-        if (!projectId) {
-            showMessage($hoursMessage, 'Please select a project.', false);
-            return;
-        }
-        if (!taskNameFromInput) {
-            showMessage($hoursMessage, 'Please select or create a task.', false);
-            return;
-        }
-        if (hours === 0 && minutes === 0) {
-            showMessage($hoursMessage, 'Please select a time duration.', false);
-            return;
-        }
+        if (!projectId) { showMessage($hoursMessage, 'Please select a project.', false); return; }
+        if (!taskNameFromInput) { showMessage($hoursMessage, 'Please select or create a task.', false); return; }
+        if (hours === 0 && minutes === 0) { showMessage($hoursMessage, 'Please select a time duration.', false); return; }
 
         let taskId;
         if (selectedTask && selectedTask.name === taskNameFromInput) {
@@ -288,13 +327,7 @@ $(document).ready(function() {
         }
 
         const totalHours = hours + (minutes / 60);
-        const postData = {
-            username: currentUserName,
-            projectId: projectId,
-            taskId: taskId,
-            hours: totalHours,
-            comment: comment
-        };
+        const postData = { username: currentUserName, projectId: projectId, taskId: taskId, hours: totalHours, comment: comment };
 
         showLoading(true);
         $addHoursButton.prop('disabled', true);
@@ -302,7 +335,7 @@ $(document).ready(function() {
         apiRequest('POST', ADD_HOURS_ENDPOINT, postData)
             .done(function (response) {
                 showMessage($hoursMessage, response.message || 'Hours added successfully!', true);
-                $projectSelect.val('');
+                $projectSelect.val('').trigger('change');
                 $taskSelection.hide();
                 $taskSearch.val('');
                 $hoursSelect.val('');
@@ -310,13 +343,14 @@ $(document).ready(function() {
                 $commentInput.val('');
                 selectedTask = null;
                 availableTasks = [];
+                $projectSuggestions.empty();
+                $taskSuggestions.empty();
+                fetchRecentProjects();
             })
             .fail(function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || `Error: ${jqXHR.status}. Failed to add hours.`;
                 showMessage($hoursMessage, errorMsg, false);
-                if (jqXHR.status === 401) {
-                    showMessage($hoursMessage, 'Session expired. Please log out and log in again.', false);
-                }
+                if (jqXHR.status === 401) { showMessage($hoursMessage, 'Session expired. Please log out and log in again.', false); }
             })
             .always(function () {
                 showLoading(false);

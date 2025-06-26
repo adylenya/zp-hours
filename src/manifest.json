@@ -9,7 +9,8 @@
   ],
   "host_permissions": [
     "https://demo-zp.zimalab.com/*",
-    "https://zp.zimalab.com/*"
+    "https://zp.zimalab.com/*",
+    "http://127.0.0.1:8000/*"
   ],
   "action": {
     "default_popup": "popup.html"

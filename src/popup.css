@@ -42,7 +42,6 @@ select,
 textarea {
     width: 100%;
     padding: 10px;
-    margin-bottom: 15px;
     border: 1px solid #ccc;
     border-radius: 6px;
     box-sizing: border-box;
@@ -148,7 +147,6 @@ button:disabled {
     overflow-y: auto;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    margin-top: -10px;
 }
 
 .task-item {
@@ -202,4 +200,28 @@ button:disabled {
     font-size: 1.2em;
     color: #555;
     z-index: 2000;
+}
+
+.suggestions-container {
+    padding-top: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.suggestion-pill {
+    background-color: #e9e9eb;
+    color: #333;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+}
+
+.suggestion-pill:hover {
+    background-color: #d1d1d6;
+    color: #000;
 }

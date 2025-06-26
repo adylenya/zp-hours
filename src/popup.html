@@ -29,7 +29,7 @@
     <div id="mainSection">
         <div class="header-controls">
             <p>Welcome, <span id="loggedInUser">User</span>!</p>
-            <div id="totalHoursToday"></div>
+            <a id="totalHoursToday"></a>
             <button id="logoutButton">Logout</button>
         </div>
 
@@ -40,6 +40,7 @@
                 <select id="projectSelect" name="project" required>
                 </select>
             </div>
+            <div id="projectSuggestions" class="suggestions-container"></div>
 
             <div id="taskSelection" style="display:none;">
                 <label for="taskSearch">Select or Create Task:</label>
@@ -47,6 +48,7 @@
                 <div id="taskListContainer">
                     <div id="taskList"></div>
                 </div>
+                <div id="taskSuggestions" class="suggestions-container"></div>
                 <p id="taskLoadingIndicator" style="display:none; font-size: 0.8em; color: #777;">Loading tasks...</p>
             </div>
 
@@ -58,8 +60,8 @@
                 </select>
             </div>
             <div>
-                <label for="comment">Comment (Optional):</label>
-                <textarea id="comment" name="comment" rows="3"></textarea>
+                <label for="comment">What's has been done (Optional):</label>
+                <textarea id="comment" name="comment" rows="5" placeholder="- Changed the layout of tables on the audit and report page&#10;- Fixed a problem with getting photos or notes from a group of reports"></textarea>
             </div>
             <button type="submit" id="addHoursButton">Add Hours</button>
             <p id="hoursMessage"></p>
