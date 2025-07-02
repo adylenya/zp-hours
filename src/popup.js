@@ -138,6 +138,7 @@ $(document).ready(function() {
         if (!currentJwtToken) return;
         showLoading(true);
         $projectSelect.empty().append('<option value="">Loading projects...</option>').prop('disabled', true);
+        $projectSuggestions.show();
 
         const projectsUrl = `${PROJECTS_ENDPOINT}?username=${currentUserName}`;
 
@@ -183,6 +184,7 @@ $(document).ready(function() {
         $taskSearch.prop('disabled', true).val('');
         availableTasks = [];
         selectedTask = null;
+        $taskSuggestions.show();
 
         const tasksUrl = `${TASKS_ENDPOINT}?username=${currentUserName}&projectId=${projectId}`;
 
@@ -223,6 +225,9 @@ $(document).ready(function() {
                 const $pill = $(`<div class="suggestion-pill" data-id="${project.id}"></div>`).text(project.name);
                 $projectSuggestions.append($pill);
             });
+            $projectSuggestions.show();
+        } else {
+            $projectSuggestions.hide();
         }
     }
 
@@ -233,12 +238,16 @@ $(document).ready(function() {
                 const $pill = $(`<div class="suggestion-pill" data-name="${task.name}"></div>`).text(task.name);
                 $taskSuggestions.append($pill);
             });
+            $taskSuggestions.show();
+        } else {
+            $taskSuggestions.hide();
         }
     }
 
     $projectSuggestions.on('click', '.suggestion-pill', function() {
         const projectId = $(this).data('id');
         $projectSelect.val(projectId).trigger('change');
+        $projectSuggestions.hide();
     });
 
     $taskSuggestions.on('click', '.suggestion-pill', function() {
@@ -246,6 +255,7 @@ $(document).ready(function() {
         $taskSearch.val(taskName);
         selectedTask = { id: null, name: taskName };
         $taskSearch.trigger('focus');
+        $taskSuggestions.hide();
     });
 
     $projectSelect.on('change', function () {
@@ -255,8 +265,10 @@ $(document).ready(function() {
             $taskSelection.show();
             fetchTasks(projectId);
             fetchRecentTasks(projectId);
+            $projectSuggestions.hide();
         } else {
             $taskSelection.hide();
+            $projectSuggestions.show();
         }
     });
 
@@ -278,19 +290,46 @@ $(document).ready(function() {
         if (searchTerm) {
             $taskList.append($(`<div class="task-item create-new" data-id="new_task">Create new task: "${searchTerm}"</div>`));
         }
-
+        $taskSuggestions.hide();
         $taskListContainer.show();
     }
 
-    $taskSearch.on('focus', renderTaskList);
-    $taskSearch.on('input', function() { selectedTask = null; renderTaskList(); });
-    $taskSearch.on('blur', function() { setTimeout(() => $taskListContainer.hide(), 200); });
+    $taskSearch.on('focus', function() {
+        if ($taskSearch.val() || availableTasks.length > 0) {
+            renderTaskList();
+        } else {
+            const projectId = $projectSelect.val();
+            if (projectId) {
+                fetchRecentTasks(projectId);
+            }
+        }
+    });
+
+    $taskSearch.on('input', function() {
+        selectedTask = null;
+        renderTaskList();
+        $taskSuggestions.hide();
+    });
+
+    $taskSearch.on('blur', function() {
+        setTimeout(() => {
+            $taskListContainer.hide();
+            if (!selectedTask && !$taskSearch.val()) {
+                const projectId = $projectSelect.val();
+                if (projectId) {
+                    fetchRecentTasks(projectId);
+                }
+            }
+        }, 200);
+    });
+
     $taskList.on('mousedown', '.task-item', function() {
         const id = $(this).data('id');
         const name = id === 'new_task' ? $taskSearch.val() : $(this).text();
         selectedTask = { id: id === 'new_task' ? null : id, name: name };
         $taskSearch.val(name);
         $taskListContainer.hide();
+        $taskSuggestions.hide();
     });
 
     function populateTimeSelectors() {
@@ -346,6 +385,7 @@ $(document).ready(function() {
                 $projectSuggestions.empty();
                 $taskSuggestions.empty();
                 fetchRecentProjects();
+                $projectSuggestions.show();
             })
             .fail(function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || `Error: ${jqXHR.status}. Failed to add hours.`;
