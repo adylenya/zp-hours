@@ -72,7 +72,7 @@ $(document).ready(function() {
             dataType: 'json'
         }).catch(function (jqXHR) {
             if (jqXHR.status === 401 && !isRetry) {
-                console.warn(`401 encountered for ${url}. Attempting token refresh...`);
+                console.log(`401 encountered for ${url}. Attempting token refresh...`);
                 return refreshAccessToken().then(function (success) {
                     if (success) {
                         console.log(`Token refreshed successfully. Retrying original request to ${url}...`);
@@ -161,7 +161,7 @@ $(document).ready(function() {
 
     function refreshAccessToken() {
         if (!currentRefreshToken) {
-            console.warn('No refresh token available. Cannot refresh.');
+            console.log('No refresh token available. Cannot refresh.');
             refreshAccessTokenPromise = null;
             return Promise.resolve(false);
         }
