@@ -1,6 +1,7 @@
 $(document).ready(function() {
-    const API_BASE_URL = 'https://demo-zp.zimalab.com';
+    const API_BASE_URL = 'http://127.0.0.1:8000';
     const LOGIN_ENDPOINT = `${API_BASE_URL}/api/login_check`;
+    const REFRESH_ENDPOINT = `${API_BASE_URL}/api/token/refresh`;
     const PROJECTS_ENDPOINT = `${API_BASE_URL}/api/projects`;
     const TASKS_ENDPOINT = `${API_BASE_URL}/api/tasks`;
     const ADD_HOURS_ENDPOINT = `${API_BASE_URL}/api/projects/hours`;
@@ -45,15 +46,18 @@ $(document).ready(function() {
     });
 
     let currentJwtToken = null;
+    let currentRefreshToken = null;
     let currentUserName = null;
     let availableTasks = [];
     let selectedTask = null;
+
+    let refreshAccessTokenPromise = null;
 
     function showLoading(isLoading) {
         $loadingIndicator.toggle(isLoading);
     }
 
-    function apiRequest(method, url, data) {
+    function apiRequest(method, url, data, isRetry = false) { // Renamed retried to isRetry for clarity
         const headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -66,6 +70,20 @@ $(document).ready(function() {
             headers: headers,
             data: data ? JSON.stringify(data) : null,
             dataType: 'json'
+        }).catch(function (jqXHR) {
+            if (jqXHR.status === 401 && !isRetry) {
+                console.warn(`401 encountered for ${url}. Attempting token refresh...`);
+                return refreshAccessToken().then(function (success) {
+                    if (success) {
+                        console.log(`Token refreshed successfully. Retrying original request to ${url}...`);
+                        return apiRequest(method, url, data, true);
+                    } else {
+                        console.error('Token refresh failed. Propagating original request error.');
+                        return Promise.reject(jqXHR);
+                    }
+                });
+            }
+            return Promise.reject(jqXHR);
         });
     }
 
@@ -108,10 +126,16 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify({ username: username, password: password })
         }).done(function (response) {
-            if (response.token) {
-                currentJwtToken = response.token;
+            if (response.access_token && response.refresh_token) {
+                currentJwtToken = response.access_token;
+                currentRefreshToken = response.refresh_token;
+                console.log(response.refresh_token);
                 currentUserName = username;
-                chrome.storage.local.set({ jwtToken: currentJwtToken, username: username }, function () {
+                chrome.storage.local.set({
+                    jwtToken: currentJwtToken,
+                    refreshToken: currentRefreshToken,
+                    username: username
+                }, function () {
                     if (chrome.runtime.lastError) {
                         showMessage($loginError, 'Storage error: ' + chrome.runtime.lastError.message, false);
                         return;
@@ -119,7 +143,7 @@ $(document).ready(function() {
                     showMainView();
                 });
             } else {
-                showMessage($loginError, 'Login failed: No token received.', false);
+                showMessage($loginError, 'Login failed: Missing tokens in response.', false);
             }
         }).fail(function() {
             showMessage($loginError, 'Login failed. Please check your credentials.', false);
@@ -129,10 +153,67 @@ $(document).ready(function() {
     });
 
     $logoutButton.on('click', function () {
-        chrome.storage.local.remove(['jwtToken', 'username'], function () {
+        chrome.storage.local.remove(['jwtToken', 'refreshToken', 'username'], function () {
+            currentRefreshToken = null;
             showLoginView();
         });
     });
+
+    function refreshAccessToken() {
+        if (!currentRefreshToken) {
+            console.warn('No refresh token available. Cannot refresh.');
+            refreshAccessTokenPromise = null;
+            return Promise.resolve(false);
+        }
+
+        if (refreshAccessTokenPromise) {
+            return refreshAccessTokenPromise;
+        }
+
+        showLoading(true);
+
+        refreshAccessTokenPromise = new Promise((resolve) => {
+            $.ajax({
+                method: 'POST',
+                url: REFRESH_ENDPOINT,
+                contentType: 'application/json',
+                data: JSON.stringify({ refresh_token: currentRefreshToken })
+            })
+                .done(function (response) {
+                    if (response.access_token) {
+                        currentJwtToken = response.access_token;
+
+                        chrome.storage.local.set({ jwtToken: currentJwtToken, refreshToken: currentRefreshToken }, function () {
+                            if (chrome.runtime.lastError) {
+                                console.error('Storage error after token refresh:', chrome.runtime.lastError.message);
+                            }
+                            console.log('Access token refreshed and stored successfully.');
+                            resolve(true);
+                        });
+                    } else {
+                        console.error('Refresh failed: No new access token received from backend.');
+                        resolve(false);
+                    }
+                })
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    console.error('Refresh token request failed:', jqXHR.status, textStatus, errorThrown);
+                    chrome.storage.local.remove(['jwtToken', 'refreshToken', 'username'], function () {
+                        currentJwtToken = null;
+                        currentRefreshToken = null;
+                        currentUserName = null;
+                        showLoginView();
+                        showMessage($loginError, 'Your session has expired. Please log in again.', false);
+                    });
+                    resolve(false);
+                })
+                .always(function () {
+                    showLoading(false);
+                    refreshAccessTokenPromise = null;
+                });
+        });
+
+        return refreshAccessTokenPromise;
+    }
 
     function fetchProjects() {
         if (!currentJwtToken) return;
@@ -162,9 +243,7 @@ $(document).ready(function() {
             .fail(function (jqXHR) {
                 const errorMsg = `Error: ${jqXHR.status}. Failed to load projects.`;
                 $projectSelect.empty().append(`<option value="">${errorMsg}</option>`).prop('disabled', true);
-                if (jqXHR.status === 401) {
-                    showMessage($hoursMessage, 'Session expired. Please log out and log in again.', false);
-                }
+                showMessage($hoursMessage, 'Session error. Please log out and log in again.', false);
             })
             .always(function () {
                 showLoading(false);
@@ -390,7 +469,7 @@ $(document).ready(function() {
             .fail(function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || `Error: ${jqXHR.status}. Failed to add hours.`;
                 showMessage($hoursMessage, errorMsg, false);
-                if (jqXHR.status === 401) { showMessage($hoursMessage, 'Session expired. Please log out and log in again.', false); }
+                showMessage($hoursMessage, 'Session error. Please log out and log in again.', false);
             })
             .always(function () {
                 showLoading(false);
@@ -399,9 +478,10 @@ $(document).ready(function() {
             });
     });
 
-    chrome.storage.local.get(['jwtToken', 'username'], function (result) {
-        if (result.jwtToken && result.username) {
+    chrome.storage.local.get(['jwtToken', 'refreshToken', 'username'], function (result) {
+        if (result.jwtToken && result.refreshToken && result.username) {
             currentJwtToken = result.jwtToken;
+            currentRefreshToken = result.refreshToken;
             currentUserName = result.username;
             showMainView();
         } else {
