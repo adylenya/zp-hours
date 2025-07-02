@@ -180,18 +180,29 @@ $(document).ready(function() {
                 data: JSON.stringify({ refresh_token: currentRefreshToken })
             })
                 .done(function (response) {
-                    if (response.access_token) {
+                    if (response.access_token && response.refresh_token) {
                         currentJwtToken = response.access_token;
+                        currentRefreshToken = response.refresh_token;
 
-                        chrome.storage.local.set({ jwtToken: currentJwtToken, refreshToken: currentRefreshToken }, function () {
+                        chrome.storage.local.set({
+                            jwtToken: currentJwtToken,
+                            refreshToken: currentRefreshToken
+                        }, function () {
                             if (chrome.runtime.lastError) {
                                 console.error('Storage error after token refresh:', chrome.runtime.lastError.message);
                             }
-                            console.log('Access token refreshed and stored successfully.');
+                            console.log('Access and refresh tokens refreshed and stored successfully.');
                             resolve(true);
                         });
                     } else {
-                        console.error('Refresh failed: No new access token received from backend.');
+                        console.error('Refresh failed: Missing new tokens in backend response.');
+                        chrome.storage.local.remove(['jwtToken', 'refreshToken', 'username'], function () {
+                            currentJwtToken = null;
+                            currentRefreshToken = null;
+                            currentUserName = null;
+                            showLoginView();
+                            showMessage($loginError, 'Your session has expired or could not be renewed. Please log in again.', false);
+                        });
                         resolve(false);
                     }
                 })
