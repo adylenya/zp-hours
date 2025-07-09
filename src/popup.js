@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    const API_BASE_URL = 'https://demo-zp.zimalab.com';
+    const API_BASE_URL = 'https://zp.zimalab.com';
     const LOGIN_ENDPOINT = `${API_BASE_URL}/api/login_check`;
     const REFRESH_ENDPOINT = `${API_BASE_URL}/api/token/refresh`;
     const PROJECTS_ENDPOINT = `${API_BASE_URL}/api/projects`;
